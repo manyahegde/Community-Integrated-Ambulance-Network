@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Maps Routing Example</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDcgC-uzyO7mdcCdpZe_PC0wPU5ppsI-O4&libraries=places"></script>
+    <script>
+        var map;
+        var directionsService;
+        var directionsRenderer;
+        var optimalDirectionsRenderer;
+        var ambulanceMarker;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 7,
+                center: { lat: 41.85, lng: -87.65 }
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            optimalDirectionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true, polylineOptions: { strokeColor: '#00FF00' } });
+            directionsRenderer.setMap(map);
+            optimalDirectionsRenderer.setMap(map);
+
+            // Add the ambulance marker
+            var ambulanceIcon = {
+                url: 'ambulance.png',
+                scaledSize: new google.maps.Size(40, 40)
+            };
+            ambulanceMarker = new google.maps.Marker({
+                icon: ambulanceIcon,
+                map: map
+            });
+
+            var onChangeHandler = function () {
+                calculateAndDisplayRoutes();
+            };
+            document.getElementById('start').addEventListener('change', onChangeHandler);
+            document.getElementById('end').addEventListener('change', onChangeHandler);
+            document.getElementById('showRouteBtn').addEventListener('click', onChangeHandler);
+        }
+
+        function calculateAndDisplayRoutes() {
+            var start = document.getElementById('start').value;
+            var end = document.getElementById('end').value;
+
+            // Request for all paths (in red)
+            directionsService.route({
+                origin: start,
+                destination: end,
+                travelMode: 'DRIVING',
+                provideRouteAlternatives: true
+            }, function (response, status) {
+                if (status === 'OK') {
+                    // Clear existing routes
+                    clearRoutes();
+                    // Display each route individually
+                    for (var i = 0; i < response.routes.length; i++) {
+                        new google.maps.DirectionsRenderer({
+                            map: map,
+                            directions: response,
+                            routeIndex: i,
+                            polylineOptions: { strokeColor: 'red' }
+                        });
+                    }
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+
+            // Request for the optimal path (in green)
+            directionsService.route({
+                origin: start,
+                destination: end,
+                travelMode: 'DRIVING',
+                optimizeWaypoints: true
+            }, function (response, status) {
+                if (status === 'OK') {
+                    // Clear existing optimal route
+                    optimalDirectionsRenderer.setDirections(null);
+                    // Display the optimal route
+                    optimalDirectionsRenderer.setDirections(response);
+                    displayRouteDetails(response, document.getElementById('optimalRoute'));
+                    var route = response.routes[0];
+                    // Move ambulance marker to the starting point of the optimal path
+                    ambulanceMarker.setPosition(route.legs[0].start_location);
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+
+        function displayRouteDetails(response, panel) {
+            var route = response.routes[0];
+            var summaryPanel = panel;
+            summaryPanel.innerHTML = '';
+            // For each route, display summary information.
+            for (var i = 0; i < response.routes.length; i++) {
+                var routeSegment = i + 1;
+                var routeSummary = '<b>Route Segment ' + routeSegment + '</b><br>';
+                var route = response.routes[i];
+                var distance = 0;
+                var duration = 0;
+                for (var j = 0; j < route.legs.length; j++) {
+                    distance += route.legs[j].distance.value;
+                    duration += route.legs[j].duration.value;
+                }
+                distance = (distance / 1000).toFixed(2); // Convert meters to kilometers
+                duration = (duration / 60).toFixed(2); // Convert seconds to minutes
+                routeSummary += 'Distance: ' + distance + ' km<br>';
+                routeSummary += 'Duration: ' + duration + ' min<br>';
+                summaryPanel.innerHTML += routeSummary + '<br>';
+            }
+        }
+
+        function clearRoutes() {
+            // Clear all routes from the map
+            directionsRenderer.setMap(null);
+            var routeRenderers = optimalDirectionsRenderer.getDirections().routes;
+            for (var i = 0; i < routeRenderers.length; i++) {
+                routeRenderers[i].setMap(null);
+            }
+        }
+        
+    </script>
+</head>
+<body onload="initMap()">
+    <div>
+        <b>Start:</b>
+        <input id="start" type="text" value="Chicago, IL">
+        <br>
+        <b>End:</b>
+        <input id="end" type="text" value="Los Angeles, CA">
+        <br>
+        <input type="button" id="showRouteBtn" value="Show Route">
+    </div>
+    <div id="map" style="height: 400px;"></div>
+    <div id="optimalRoute"></div>
+</body>
+</html>
