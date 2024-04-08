@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Certificate Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: calc(100% - 20px);
+            padding: 10px;
+            background-color: #ff0051;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        button:hover {
+            background-color: #f50350;
+        }
+
+        .message {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 style="text-align: center;">CPR Certificate Verification</h1>
+        <input type="text" id="certificateId" placeholder="Certificate ID">
+        <input type="text" id="name" placeholder="Holder's Name">
+        <button onclick="verifyCertificate()">Verify</button>
+        <div class="message" id="verificationMessage"></div>
+    </div>
+
+    <script>
+        function verifyCertificate() {
+            var certificateId = document.getElementById('certificateId').value;
+            var name = document.getElementById('name').value;
+
+            fetch('https://docs.google.com/spreadsheets/d/1nEA5IAY9PS7a-xEPBsH7tez1IoUA4_SQ_tx_5xJosq8/export?format=csv')
+                .then(response => response.text())
+                .then(csvData => {
+                    var rows = csvData.split('\n');
+                    var isValid = false;
+                    var expiryDate = null;
+
+                    for (var i = 1; i < rows.length; i++) {
+                        var cols = rows[i].split(',');
+                        if (cols.length >= 4 && cols[0] === certificateId && cols[1] === name) {
+                            isValid = true;
+                            expiryDate = cols[3];
+                            break;
+                        }
+                    }
+
+                    var verificationMessageElement = document.getElementById('verificationMessage');
+                    if (isValid) {
+                        var now = new Date();
+                        var expiry = new Date(expiryDate);
+                        if (expiry > now) {
+                            verificationMessageElement.innerText = 'You are verified!';
+                            verificationMessageElement.style.color = 'green';
+                        } else {
+                            verificationMessageElement.innerText = 'Your certificate has expired.';
+                            verificationMessageElement.style.color = 'red';
+                        }
+                    } else {
+                        verificationMessageElement.innerText = 'Invalid ID or Name';
+                        verificationMessageElement.style.color = 'red';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching certificate data:', error);
+                    var verificationMessageElement = document.getElementById('verificationMessage');
+                    verificationMessageElement.innerText = 'Failed to fetch certificate data';
+                    verificationMessageElement.style.color = 'red';
+                });
+        }
+    </script>
+</body>
+
+</html>

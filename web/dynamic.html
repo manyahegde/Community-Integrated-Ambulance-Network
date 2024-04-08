@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Optimal Routing with Google Maps API</title>
+    <style>
+       
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+       
+        input[type="text"] {
+            width: 75%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+      
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+       
+        #route-info {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+  
+        #directions-panel {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+  
+    <label for="origin">Origin:</label>
+    <input type="text" id="origin" placeholder="Enter origin address"><br>
+
+ 
+    <label for="destination">Destination:</label>
+    <input type="text" id="destination" placeholder="Enter destination address"><br>
+
+    <button onclick="calculateRoute()">Get Route</button>
+
+    
+    <div id="route-info"></div>
+
+    
+    <div id="map"></div>
+
+    <div id="directions-panel"></div>
+
+  
+    <button onclick="startVoiceAssistance()">Start Voice Assistance</button>
+    <button onclick="stopVoiceAssistance()">Stop Voice Assistance</button>
+
+    <script>
+        var map;
+        var directionsService;
+        var directionsRenderer;
+        var stepDisplay;
+        var synthesis = window.speechSynthesis;
+        var utterance;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: 40.7128, lng: -74.0060},
+                zoom: 12 
+            });
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                panel: document.getElementById('directions-panel')
+            });
+            stepDisplay = new google.maps.InfoWindow();
+
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    var pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    map.setCenter(pos);
+                    document.getElementById('origin').value = pos.lat + ', ' + pos.lng;
+                }, function() {
+                    handleLocationError(true, infoWindow, map.getCenter());
+                });
+            } else {
+                
+                handleLocationError(false, infoWindow, map.getCenter());
+            }
+        }
+
+        function calculateRoute() {
+            var origin = document.getElementById('origin').value;
+            var destination = document.getElementById('destination').value;
+
+            var request = {
+                origin: origin,
+                destination: destination,
+                travelMode: 'DRIVING'
+            };
+
+            directionsService.route(request, function(result, status) {
+                if (status == 'OK') {
+                    directionsRenderer.setDirections(result);
+                    showRouteInfo(result);
+                    showStepByStepDirections(result);
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+        }
+
+        function showRouteInfo(result) {
+            var route = result.routes[0];
+            var routeInfoDiv = document.getElementById('route-info');
+
+            var distance = route.legs[0].distance.text;
+            var duration = route.legs[0].duration.text;
+
+            routeInfoDiv.innerHTML = '<p><strong>Distance:</strong> ' + distance + '</p><p><strong>Duration:</strong> ' + duration + '</p>';
+        }
+
+        function showStepByStepDirections(result) {
+            var route = result.routes[0];
+            var steps = route.legs[0].steps;
+
+            for (var i = 0; i < steps.length; i++) {
+                var marker = new google.maps.Marker({
+                    position: steps[i].start_location,
+                    map: map,
+                    title: steps[i].instructions
+                });
+                attachInstructionText(marker, steps[i].instructions);
+            }
+        }
+
+        function attachInstructionText(marker, text) {
+            google.maps.event.addListener(marker, 'click', function() {
+                stepDisplay.setContent(text);
+                stepDisplay.open(map, marker);
+            });
+        }
+
+        function startVoiceAssistance() {
+            var routeInfoDiv = document.getElementById('route-info');
+            var routeInfoText = routeInfoDiv.innerText;
+            utterance = new SpeechSynthesisUtterance(routeInfoText);
+            synthesis.speak(utterance);
+        }
+
+        function stopVoiceAssistance() {
+            if (utterance && synthesis.speaking) {
+                synthesis.cancel();
+            }
+        }
+    </script>
+    
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDcgC-uzyO7mdcCdpZe_PC0wPU5ppsI-O4&callback=initMap&libraries=places" async defer></script>
+</body>
+</html>

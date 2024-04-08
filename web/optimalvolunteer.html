@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shortest Distance</title>
+    <script>
+        var map;
+        var sourceLocation;
+        var volunteerMarkers = []; // Array to store volunteer markers
+        var closestVolunteerIndex = -1; // Index of volunteer with the closest distance
+        var closestDistance = Number.MAX_VALUE; // Current closest distance
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 40.7128, lng: -74.0060 }, // Default center (New York)
+                zoom: 10
+            });
+
+            // Get the user's location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    sourceLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+                    map.setCenter(sourceLocation);
+                    // Example: Update volunteer locations every 5 seconds (for demonstration)
+                    setInterval(updateVolunteerLocations, 5000);
+                }, function() {
+                    alert('Error: The Geolocation service failed.');
+                });
+            } else {
+                alert('Error: Your browser doesn\'t support geolocation.');
+            }
+        }
+
+        function updateVolunteerLocations() {
+            // Example: Get updated volunteer locations (you need to implement this part)
+            var updatedVolunteerLocations = getUpdatedVolunteerLocations();
+
+            // Clear existing volunteer markers
+            volunteerMarkers.forEach(function(marker) {
+                marker.setMap(null);
+            });
+            volunteerMarkers = [];
+
+            // Recalculate distances and find the closest volunteer
+            updatedVolunteerLocations.forEach(function(volunteer, index) {
+                var volunteerLatLng = new google.maps.LatLng(volunteer.lat, volunteer.lng);
+                var distance = google.maps.geometry.spherical.computeDistanceBetween(sourceLocation, volunteerLatLng);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestVolunteerIndex = index;
+                }
+                var marker = new google.maps.Marker({
+                    position: volunteerLatLng,
+                    map: map,
+                    title: 'Volunteer ' + (index + 1) + ' - Distance: ' + distance.toFixed(2) + ' meters'
+                });
+                volunteerMarkers.push(marker);
+            });
+
+            // Print the closest volunteer number
+            if (closestVolunteerIndex !== -1) {
+                console.log("Volunteer " + (closestVolunteerIndex + 1) + " is the closest, with a distance of " + closestDistance.toFixed(2) + " meters.");
+            } else {
+                console.log("No volunteers available.");
+            }
+        }
+
+        // Example function to get updated volunteer locations (replace with your implementation)
+        function getUpdatedVolunteerLocations() {
+            // Example: Generate random volunteer locations within a small range around the source location
+            var updatedVolunteerLocations = [];
+            for (var i = 0; i < 5; i++) {
+                var lat = sourceLocation.lat + Math.random() * 0.05 - 0.025;
+                var lng = sourceLocation.lng + Math.random() * 0.05 - 0.025;
+                updatedVolunteerLocations.push({ lat: lat, lng: lng });
+            }
+            return updatedVolunteerLocations;
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDcgC-uzyO7mdcCdpZe_PC0wPU5ppsI-O4&callback=initMap&libraries=geometry" async defer></script>
+</head>
+<body>
+    <div id="map" style="height: 400px; width: 100%;"></div>
+</body>
+</html>
